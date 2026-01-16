@@ -73,3 +73,6 @@ func RemoveBlocked(id ClientID) {
 		}
 	}
 }
+func GetClientID(remoteAddr string) ClientID {
+    return ClientID(remoteAddr)
+}
