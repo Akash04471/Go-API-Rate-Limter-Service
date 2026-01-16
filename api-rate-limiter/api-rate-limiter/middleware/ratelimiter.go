@@ -3,10 +3,10 @@ package middleware
 import (
 	"fmt"
 	"net/http"
-	"time"
+	
 
 	"api-rate-limiter/config"
-	"api-rate-limiter/ratelimiter"
+	"api-rate-limiter/rate-limiter"
 )
 
 func RateLimiter(next http.Handler) http.Handler {
@@ -16,14 +16,10 @@ func RateLimiter(next http.Handler) http.Handler {
 
 		fmt.Println("Incoming request from:", clientID)
 
-		allowed := ratelimiter.AllowRequest(
-			clientID,
-			config.RequestLimit,
-			time.Duration(config.TimeWindowSeconds)*time.Second,
-		)
+	allowed := ratelimiter.AllowRequest(clientID, config.RequestLimit, config.TimeWindow)
 
-		// if-else control flow
-		if !allowed {
+	// if-else control flow
+	if !allowed {
 			fmt.Println("Request blocked:", clientID)
 			w.WriteHeader(http.StatusTooManyRequests)
 
