@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>API Rate Limiter</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    #log {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>API Rate Limiter</h1>
+  <p>Press the button to send requests</p>
+
+  <button onclick="startRequests()">Start Requests</button>
+  <button onclick="stopRequests()">Stop Requests</button>
+
+  <div id="log"></div>
+
+  <script>
+    let intervalId = null;
+
+    function startRequests() {
+      if (intervalId !== null) return; // prevent multiple intervals
+
+      intervalId = setInterval(() => {
+        fetch("http://localhost:8080/api/test")
+          .then(res => {
+            if (!res.ok) throw new Error("Blocked");
+            return res.text();
+          })
+          .then(() => log("✅ Allowed"))
+          .catch(() => log("❌ Blocked"));
+      }, 500);
+    }
+
+    function stopRequests() {
+      clearInterval(intervalId);
+      intervalId = null;
+      log("⏹ Requests stopped");
+    }
+
+    function log(message) {
+      document.getElementById("log").innerHTML += message + "<br>";
+    }
+  </script>
+
+</body>
+</html>

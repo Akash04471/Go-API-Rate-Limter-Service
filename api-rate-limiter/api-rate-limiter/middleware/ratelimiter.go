@@ -1,9 +1,10 @@
 package middleware
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
-	
+	"time"
 
 	"api-rate-limiter/config"
 	"api-rate-limiter/rate-limiter"
@@ -12,31 +13,41 @@ import (
 func RateLimiter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		clientID := ratelimiter.ClientID(r.RemoteAddr)
-
+		// Get client identifier
+		clientID := ratelimiter.GetClientID(r.RemoteAddr)
 		fmt.Println("Incoming request from:", clientID)
 
-	allowed := ratelimiter.AllowRequest(clientID, config.RequestLimit, config.TimeWindow)
+		// Rate limit check
+		allowed, remaining, resetTime := ratelimiter.AllowRequest(
+			clientID,
+			config.RequestLimit,
+			config.TimeWindow,
+		)
 
-	// if-else control flow
-	if !allowed {
+		// Blocked request
+		if !allowed {
 			fmt.Println("Request blocked:", clientID)
+
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusTooManyRequests)
 
-			// Anonymous struct for JSON-style response
+			// Anonymous struct (Unit 2 concept)
 			response := struct {
-				Status  string
-				Message string
+				Status    string `json:"status"`
+				Message   string `json:"message"`
+				RetryAfter string `json:"retry_after"`
 			}{
-				Status:  "blocked",
-				Message: "Rate limit exceeded",
+				Status:    "blocked",
+				Message:   "Rate limit exceeded",
+				RetryAfter: time.Unix(int64(resetTime), 0).Format("15:04:05"),
 			}
 
-			fmt.Fprintf(w, "%+v\n", response)
+			json.NewEncoder(w).Encode(response)
 			return
 		}
 
-		fmt.Println("Request allowed:", clientID)
+		// Allowed request
+		fmt.Println("Request allowed:", clientID, "| Remaining:", remaining)
 		next.ServeHTTP(w, r)
 	})
 }

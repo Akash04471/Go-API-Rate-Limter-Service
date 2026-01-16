@@ -1,78 +1,49 @@
 package ratelimiter
 
 import (
+	"sync"
 	"time"
 )
 
-// ---------- UNIT 1 ----------
-
-// Creating your own type (custom type)
-type ClientID string
-
-// ---------- UNIT 2 ----------
-
-// Struct to store client data (zero values used automatically)
 type Client struct {
 	RequestCount int
 	ResetTime    time.Time
 }
 
-// Embedded struct example
-type ClientMeta struct {
-	Client
-	IsBlocked bool
+var (
+	clients = make(map[string]*Client)
+	mu      sync.Mutex
+)
+
+// Get client ID
+func GetClientID(remoteAddr string) string {
+	return remoteAddr
 }
 
-// Map to store clients (make + map)
-var Clients = make(map[ClientID]*Client)
+// Core rate limiting logic
+func AllowRequest(clientID string, limit int, window time.Duration) (bool, int, int) {
+	mu.Lock()
+	defer mu.Unlock()
 
-// Slice to track blocked clients
-var BlockedClients []ClientID
-
-// Multi-dimensional slice (example: request history)
-var RequestHistory [][]int
-
-// ---------- Rate Limiting Logic ----------
-
-func AllowRequest(id ClientID, limit int, window time.Duration) bool {
-
-	// Short declaration operator (:=)
-	client, exists := Clients[id]
-
+	client, exists := clients[clientID]
 	if !exists {
-		// Zero values automatically applied
-		client = &Client{
-			ResetTime: time.Now().Add(window),
-		}
-		Clients[id] = client
+		client = &Client{}
+		clients[clientID] = client
 	}
 
-	// Control flow: conditional
-	if time.Now().After(client.ResetTime) {
+	now := time.Now()
+
+	if client.ResetTime.IsZero() || now.After(client.ResetTime) {
 		client.RequestCount = 0
-		client.ResetTime = time.Now().Add(window)
+		client.ResetTime = now.Add(window)
 	}
 
-	// if-else for allow / block
-	if client.RequestCount < limit {
-		client.RequestCount++
-		return true
+	if client.RequestCount >= limit {
+		remaining := int(client.ResetTime.Sub(now).Seconds())
+		return false, client.RequestCount, remaining
 	}
 
-	// Append to slice
-	BlockedClients = append(BlockedClients, id)
-	return false
-}
-
-// Delete from slice example
-func RemoveBlocked(id ClientID) {
-	for i, v := range BlockedClients {
-		if v == id {
-			BlockedClients = append(BlockedClients[:i], BlockedClients[i+1:]...)
-			break
-		}
-	}
-}
-func GetClientID(remoteAddr string) ClientID {
-    return ClientID(remoteAddr)
+	client.RequestCount++
+	remaining := int(client.ResetTime.Sub(now).Seconds())
+	return true, client.RequestCount, remaining
 }
