@@ -19,10 +19,10 @@ func main() {
 	// Middleware usage
 	http.Handle("/api/test", middleware.RateLimiter(handler))
 
-	// for loop (continuous server readiness example)
-	for i := 1; i <= 1; i++ {
-		fmt.Println("Server listening on port", config.ServerPort)
-	}
+	fmt.Println("Server listening on port", config.ServerPort)
 
-	http.ListenAndServe(config.ServerPort, nil)
+	err := http.ListenAndServe(config.ServerPort, nil)
+	if err != nil {
+		fmt.Println("Server error:", err)
+	}
 }
