@@ -13,7 +13,7 @@ import (
 func RateLimiter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// Get client identifier
+		// Extracting client identifier
 		clientID := ratelimiter.GetClientID(r.RemoteAddr)
 		fmt.Println("Incoming request from:", clientID)
 
@@ -31,7 +31,7 @@ func RateLimiter(next http.Handler) http.Handler {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusTooManyRequests)
 
-			// Anonymous struct (Unit 2 concept)
+			// Anonymous struct
 			response := struct {
 				Status    string `json:"status"`
 				Message   string `json:"message"`

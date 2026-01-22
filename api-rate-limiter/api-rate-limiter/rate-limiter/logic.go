@@ -27,7 +27,7 @@ func AllowRequest(clientID string, limit int, window time.Duration) (bool, int, 
 
 	client, exists := clients[clientID]
 	if !exists {
-		client = &Client{}
+		client = &Client{}//zero values
 		clients[clientID] = client
 	}
 
